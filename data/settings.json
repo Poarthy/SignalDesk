@@ -1,0 +1,52 @@
+{
+  "windowHours": 12,
+  "autoRefreshMinutes": 0,
+  "maxItems": 240,
+  "sources": {
+    "bbc-world": {
+      "enabled": true
+    },
+    "guardian-world": {
+      "enabled": true
+    },
+    "aljazeera": {
+      "enabled": true
+    },
+    "france24": {
+      "enabled": true
+    },
+    "dw": {
+      "enabled": true
+    },
+    "nyt": {
+      "enabled": true
+    },
+    "npr": {
+      "enabled": true
+    },
+    "cnn": {
+      "enabled": true
+    },
+    "iran-intl-fa": {
+      "enabled": true
+    },
+    "bbc-persian": {
+      "enabled": true
+    },
+    "irna-fa": {
+      "enabled": true
+    },
+    "mehr-fa": {
+      "enabled": true
+    },
+    "isna-fa": {
+      "enabled": true
+    },
+    "khabaronline-fa": {
+      "enabled": true
+    },
+    "hamshahrionline-fa": {
+      "enabled": true
+    }
+  }
+}

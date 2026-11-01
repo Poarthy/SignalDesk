@@ -1,0 +1,19 @@
+{
+  "sources": [
+    { "id": "bbc-world", "name": "BBC News", "country": "United Kingdom", "flag": "\ud83c\uddec\ud83c\udde7", "region": "global", "lang": "en", "type": "Broadcaster", "feeds": ["https://feeds.bbci.co.uk/news/world/rss.xml"] },
+    { "id": "guardian-world", "name": "The Guardian", "country": "United Kingdom", "flag": "\ud83c\uddec\ud83c\udde7", "region": "global", "lang": "en", "type": "Newspaper", "feeds": ["https://www.theguardian.com/world/rss"] },
+    { "id": "aljazeera", "name": "Al Jazeera", "country": "Qatar", "flag": "\ud83c\uddf6\ud83c\udde6", "region": "global", "lang": "en", "type": "Broadcaster", "feeds": ["https://www.aljazeera.com/xml/rss/all.xml"] },
+    { "id": "france24", "name": "France 24", "country": "France", "flag": "\ud83c\uddeb\ud83c\uddf7", "region": "global", "lang": "en", "type": "Broadcaster", "feeds": ["https://www.france24.com/en/rss"] },
+    { "id": "dw", "name": "DW (Deutsche Welle)", "country": "Germany", "flag": "\ud83c\udde9\ud83c\uddea", "region": "global", "lang": "en", "type": "Broadcaster", "feeds": ["https://rss.dw.com/xml/rss-en-world"] },
+    { "id": "nyt", "name": "The New York Times", "country": "United States", "flag": "\ud83c\uddfa\ud83c\uddf8", "region": "global", "lang": "en", "type": "Newspaper", "feeds": ["https://rss.nytimes.com/services/xml/rss/nyt/World.xml"] },
+    { "id": "npr", "name": "NPR", "country": "United States", "flag": "\ud83c\uddfa\ud83c\uddf8", "region": "global", "lang": "en", "type": "Broadcaster", "feeds": ["https://feeds.npr.org/1001/rss.xml"] },
+    { "id": "cnn", "name": "CNN", "country": "United States", "flag": "\ud83c\uddfa\ud83c\uddf8", "region": "global", "lang": "en", "type": "Broadcaster", "feeds": ["http://rss.cnn.com/rss/edition_world.rss"] },
+    { "id": "iran-intl-fa", "name": "ایران اینترنشنال", "country": "United Kingdom", "flag": "\ud83c\uddec\ud83c\udde7", "region": "persian-diaspora", "lang": "fa", "type": "خبرگزاری", "feeds": ["https://www.iranintl.com/fa/feed", "https://www.iranintl.com/fa/rss"] },
+    { "id": "bbc-persian", "name": "بی‌بی‌سی فارسی", "country": "United Kingdom", "flag": "\ud83c\uddec\ud83c\udde7", "region": "persian-diaspora", "lang": "fa", "type": "برودکستر", "feeds": ["https://feeds.bbci.co.uk/persian/rss.xml", "https://www.bbc.com/persian/rss.xml"] },
+    { "id": "irna-fa", "name": "خبرگزاری ایرنا", "country": "ایران", "flag": "\ud83c\uddee\ud83c\uddf7", "region": "iran", "lang": "fa", "type": "خبرگزاری", "feeds": ["https://www.irna.ir/rss", "https://www.irna.ir/feed"] },
+    { "id": "mehr-fa", "name": "خبرگزاری مهر", "country": "ایران", "flag": "\ud83c\uddee\ud83c\uddf7", "region": "iran", "lang": "fa", "type": "خبرگزاری", "feeds": ["https://www.mehrnews.com/rss", "https://www.mehrnews.com/feed"] },
+    { "id": "isna-fa", "name": "خبرگزاری ایسنا", "country": "ایران", "flag": "\ud83c\uddee\ud83c\uddf7", "region": "iran", "lang": "fa", "type": "خبرگزاری", "feeds": ["https://www.isna.ir/rss", "https://www.isna.ir/feed"] },
+    { "id": "khabaronline-fa", "name": "خبرآنلاین", "country": "ایران", "flag": "\ud83c\uddee\ud83c\uddf7", "region": "iran", "lang": "fa", "type": "پایگاه خبری", "feeds": ["https://www.khabaronline.ir/rss", "https://www.khabaronline.ir/feed"] },
+    { "id": "hamshahrionline-fa", "name": "همشهری آنلاین", "country": "ایران", "flag": "\ud83c\uddee\ud83c\uddf7", "region": "iran", "lang": "fa", "type": "روزنامه", "feeds": ["https://www.hamshahrionline.ir/rss", "https://www.hamshahrionline.ir/feed"] }
+  ]
+}
