@@ -55,6 +55,13 @@ npm start         # http://localhost:3000
 Other scripts: `npm run dev` (Turbopack dev server), `npm run news` (re-pull feeds
 only), `npm run typecheck`. Requires Node >= 20.18.
 
+## Android
+
+The APK is built in GitHub Actions, never in the local checkout.
+Run **Android APK** from the Actions tab, then download its artifact.
+Add signing secrets only when you need a stable release APK.
+See [the Android build guide](docs/ANDROID.md) for the full workflow and troubleshooting.
+
 ## Fonts
 
 SignalDesk self-hosts Bricolage Grotesque (The Bricolage Grotesque Project
