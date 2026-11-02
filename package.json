@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit",
     "prebuild": "tsx src/scripts/fetch-news.ts",
     "build": "next build",
+    "mobile:build": "BUILD_TARGET=mobile NEXT_PUBLIC_TARGET=mobile next build",
     "start": "next start"
   },
   "dependencies": {

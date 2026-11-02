@@ -63,7 +63,7 @@
   --content-width: calc(100% - 4rem);
   --card-padding: 0.875rem;
   --control-height: 2.25rem;
-  --control-height-coarse: 2.5rem;
+  --control-height-coarse: 2.75rem;
   --control-hit-area: 2.5rem;
   --panel-width: 25rem;
   --story-title-size: clamp(1rem, 0.93rem + 0.45vw, 1.22rem);
@@ -496,6 +496,16 @@
 
 @media (pointer: coarse) {
   :root { --control-height: var(--control-height-coarse); }
+}
+
+@supports (padding: max(0px)) {
+  .masthead {
+    padding-top: max(env(safe-area-inset-top), var(--safe-area-inset-top, 0px));
+  }
+
+  .site-footer__inner {
+    padding-bottom: max(env(safe-area-inset-bottom), var(--safe-area-inset-bottom, 0px));
+  }
 }
 
 @media (max-width: 40rem) {

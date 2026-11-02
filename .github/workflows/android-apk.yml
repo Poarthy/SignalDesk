@@ -1,0 +1,258 @@
+name: Android APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      variant:
+        description: APK signing variant
+        required: false
+        default: debug
+        type: choice
+        options:
+          - debug
+          - release
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Pin this to a compatible Capacitor major, for example ^7 or ^8, when desired.
+  CAPACITOR_TAG: latest
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    env:
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      REQUESTED_VARIANT: ${{ inputs.variant || 'auto' }}
+      GITHUB_REF_TYPE_INPUT: ${{ github.ref_type }}
+      GITHUB_REF_NAME_INPUT: ${{ github.ref_name }}
+      GITHUB_RUN_NUMBER_INPUT: ${{ github.run_number }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Install locked web dependencies
+        run: |
+          set -euo pipefail
+          npm ci
+
+      - name: Install Capacitor in this runner only
+        run: |
+          set -euo pipefail
+          npm install --no-save --no-audit --no-fund "@capacitor/core@${CAPACITOR_TAG}" "@capacitor/cli@${CAPACITOR_TAG}" "@capacitor/android@${CAPACITOR_TAG}"
+          npm ls @capacitor/core @capacitor/cli @capacitor/android
+          printf 'RESOLVED_CAPACITOR_VERSION=%s\n' "$(node -p "require('./node_modules/@capacitor/core/package.json').version")" >> "$GITHUB_ENV"
+
+      - name: Remove server API routes for the static export
+        run: |
+          set -euo pipefail
+          # Static export cannot contain dynamic route handlers. This affects only the CI checkout.
+          rm -rf src/app/api
+
+      - name: Build static mobile assets
+        run: |
+          set -euo pipefail
+          npm run mobile:build
+          if ! test -f out/index.html; then
+            echo "Mobile export did not produce out/index.html" >&2
+            exit 1
+          fi
+
+      - name: Generate and sync the Android project
+        run: |
+          set -euo pipefail
+          ./node_modules/.bin/cap add android
+          ./node_modules/.bin/cap sync android
+
+      - name: Set Android version and prepare generated resources
+        env:
+          ALLOW_CLEARTEXT: "1"
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF_TYPE_INPUT" == "tag" && "$GITHUB_REF_NAME_INPUT" == v* ]]; then
+            APP_VERSION_NAME="${GITHUB_REF_NAME_INPUT#v}"
+          else
+            APP_VERSION_NAME="$(node -p "require('./package.json').version")-dev"
+          fi
+          APP_VERSION_CODE="$GITHUB_RUN_NUMBER_INPUT"
+          printf 'APP_VERSION_NAME=%s\n' "$APP_VERSION_NAME" >> "$GITHUB_ENV"
+          printf 'APP_VERSION_CODE=%s\n' "$APP_VERSION_CODE" >> "$GITHUB_ENV"
+          APP_VERSION_NAME="$APP_VERSION_NAME" APP_VERSION_CODE="$APP_VERSION_CODE" node scripts/mobile/prepare-android.mjs
+
+      - name: Accept Android SDK licenses
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses >/dev/null || true
+
+      - name: Select and validate signing variant
+        run: |
+          set -euo pipefail
+          if [[ "$REQUESTED_VARIANT" == "auto" ]]; then
+            if [[ "$GITHUB_REF_TYPE_INPUT" == "tag" && -n "$ANDROID_KEYSTORE_BASE64" ]]; then
+              BUILD_VARIANT="release"
+            else
+              BUILD_VARIANT="debug"
+            fi
+          else
+            BUILD_VARIANT="$REQUESTED_VARIANT"
+          fi
+          case "$BUILD_VARIANT" in
+            debug|release) ;;
+            *)
+              echo "variant must be debug or release" >&2
+              exit 1
+              ;;
+          esac
+          if [[ "$BUILD_VARIANT" == "release" && -z "$ANDROID_KEYSTORE_BASE64" ]]; then
+            echo "A release build requires ANDROID_KEYSTORE_BASE64 and the related signing secrets." >&2
+            exit 1
+          fi
+          if [[ "$BUILD_VARIANT" == "release" ]]; then
+            for secret_name in ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+              if [[ -z "${!secret_name}" ]]; then
+                echo "A release build is missing ${secret_name}." >&2
+                exit 1
+              fi
+            done
+          fi
+          printf 'BUILD_VARIANT=%s\n' "$BUILD_VARIANT" >> "$GITHUB_ENV"
+
+      - name: Assemble APK
+        run: |
+          set -euo pipefail
+          if [[ "$BUILD_VARIANT" == "release" ]]; then
+            (cd android && ./gradlew --no-daemon --stacktrace assembleRelease)
+          else
+            (cd android && ./gradlew --no-daemon --stacktrace assembleDebug)
+          fi
+
+      - name: Sign the release APK
+        if: env.ANDROID_KEYSTORE_BASE64 != '' && env.BUILD_VARIANT == 'release'
+        run: |
+          set -euo pipefail
+          KEYSTORE_PATH="$RUNNER_TEMP/signaldesk-release.jks"
+          ALIGNED_APK="$RUNNER_TEMP/signaldesk-aligned.apk"
+          SIGNED_APK="$RUNNER_TEMP/signaldesk-release.apk"
+          trap 'rm -f "$KEYSTORE_PATH" "$ALIGNED_APK"' EXIT
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
+          BUILD_TOOLS_DIR="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort -V | tail -n 1)"
+          if [[ -z "$BUILD_TOOLS_DIR" ]]; then
+            echo "Could not locate Android build-tools." >&2
+            exit 1
+          fi
+          ZIPALIGN="$ANDROID_HOME/build-tools/$BUILD_TOOLS_DIR/zipalign"
+          APKSIGNER="$ANDROID_HOME/build-tools/$BUILD_TOOLS_DIR/apksigner"
+          UNSIGNED_APK="$GITHUB_WORKSPACE/android/app/build/outputs/apk/release/app-release-unsigned.apk"
+          test -x "$ZIPALIGN"
+          test -x "$APKSIGNER"
+          test -f "$UNSIGNED_APK"
+          "$ZIPALIGN" -f 4 "$UNSIGNED_APK" "$ALIGNED_APK"
+          "$APKSIGNER" sign --ks "$KEYSTORE_PATH" --ks-key-alias "$ANDROID_KEY_ALIAS" --ks-pass env:ANDROID_KEYSTORE_PASSWORD --key-pass env:ANDROID_KEY_PASSWORD --out "$SIGNED_APK" "$ALIGNED_APK"
+          "$APKSIGNER" verify --verbose "$SIGNED_APK"
+
+      - name: Package and verify APK
+        run: |
+          set -euo pipefail
+          DIST_DIR="$GITHUB_WORKSPACE/dist"
+          mkdir -p "$DIST_DIR"
+          if [[ "$BUILD_VARIANT" == "release" ]]; then
+            SOURCE_APK="$RUNNER_TEMP/signaldesk-release.apk"
+            SIGNING_MODE="release key from GitHub Actions secrets"
+          else
+            SOURCE_APK="$GITHUB_WORKSPACE/android/app/build/outputs/apk/debug/app-debug.apk"
+            SIGNING_MODE="debug key generated by the CI runner"
+          fi
+          test -f "$SOURCE_APK"
+          if [[ ! "$APP_VERSION_NAME" =~ ^[0-9A-Za-z.+_-]+$ ]]; then
+            echo "APP_VERSION_NAME contains unsupported filename characters." >&2
+            exit 1
+          fi
+          APK_FILENAME="SignalDesk-${APP_VERSION_NAME}-${BUILD_VARIANT}.apk"
+          APK_PATH="$DIST_DIR/$APK_FILENAME"
+          cp "$SOURCE_APK" "$APK_PATH"
+          (cd "$DIST_DIR" && sha256sum "$APK_FILENAME" > SHA256SUMS.txt)
+          if ! unzip -l "$APK_PATH" | grep -q 'assets/public/index.html'; then
+            echo "APK does not contain assets/public/index.html" >&2
+            exit 1
+          fi
+          printf 'APK_PATH=%s\n' "$APK_PATH" >> "$GITHUB_ENV"
+          printf 'DIST_DIR=%s\n' "$DIST_DIR" >> "$GITHUB_ENV"
+          printf 'SIGNING_MODE=%s\n' "$SIGNING_MODE" >> "$GITHUB_ENV"
+          APK_SIZE="$(wc -c < "$APK_PATH")"
+          APK_SHA256="$(awk '{print $1}' "$DIST_DIR/SHA256SUMS.txt")"
+          {
+            echo "## SignalDesk Android APK"
+            echo
+            echo "- Variant: $BUILD_VARIANT"
+            echo "- Version: $APP_VERSION_NAME ($APP_VERSION_CODE)"
+            echo "- Size: $APK_SIZE bytes"
+            echo "- SHA-256: $APK_SHA256"
+            echo "- Capacitor: $RESOLVED_CAPACITOR_VERSION"
+            echo "- Signing: $SIGNING_MODE"
+            if [[ "$BUILD_VARIANT" == "debug" ]]; then
+              echo "- Warning: the runner-generated debug signature changes between runs. Uninstall an older debug APK before installing this one."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: signaldesk-apk-${{ github.run_number }}
+          path: |
+            dist/*.apk
+            dist/SHA256SUMS.txt
+          retention-days: 30
+
+      - name: Upload Gradle and build logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: signaldesk-build-logs-${{ github.run_number }}
+          path: |
+            android/**/build/reports/**
+            android/**/build/*.log
+            android/**/.gradle/**
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Create or update tagged release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view "$GITHUB_REF_NAME_INPUT" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME_INPUT" "$APK_PATH" "$DIST_DIR/SHA256SUMS.txt" --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create "$GITHUB_REF_NAME_INPUT" "$APK_PATH" "$DIST_DIR/SHA256SUMS.txt" --generate-notes --repo "$GITHUB_REPOSITORY"
+          fi

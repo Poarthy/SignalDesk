@@ -1,0 +1,9 @@
+{
+  "appId": "com.poarthy.signaldesk",
+  "appName": "Signal Desk",
+  "webDir": "out",
+  "backgroundColor": "#0a0a0c",
+  "server": { "androidScheme": "https" },
+  "android": { "allowMixedContent": false },
+  "plugins": { "CapacitorHttp": { "enabled": true } }
+}

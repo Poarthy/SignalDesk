@@ -25,3 +25,10 @@ image-search/
 
 # Generated digest (rebuilt by prebuild/runtime sync)
 data/news.json
+
+# Android build artifacts (generated only in GitHub Actions)
+android/
+*.keystore
+*.jks
+*.apk
+*.aab
