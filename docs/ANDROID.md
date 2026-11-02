@@ -17,7 +17,7 @@ The web app keeps its existing Next.js server routes and filesystem-backed store
 1. Push `feat/android-apk` to GitHub and open **Actions**.
 2. Choose **Android APK**, click **Run workflow**, and select `debug` or `release`.
 3. Download the `signaldesk-apk-<run-number>` artifact from the completed run.
-4. To create a GitHub Release, tag and push a version such as `v2.1.0`.
+4. To create a GitHub Release, tag and push a version such as `v2.1.0`. A tagged build uses release signing when the keystore secrets exist, otherwise it publishes a debug APK.
 
 The workflow builds a debug APK by default. Debug builds are installable, but GitHub's runner uses a new debug signing key, so an older debug APK usually must be uninstalled before installing the next one.
 
