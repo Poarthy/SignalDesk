@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import MobileBootstrap from "@/components/MobileBootstrap";
 import Providers from "@/components/providers";
 import "./globals.css";
 
@@ -9,6 +10,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
+  viewportFit: "cover",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#faf7f2" },
     { media: "(prefers-color-scheme: dark)", color: "#0a0a0c" },
@@ -28,7 +30,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       </head>
       <body>
         <a className="skip" href="#main-content">Skip to content</a>
-        <Providers>{children}</Providers>
+        <Providers>
+          <MobileBootstrap />
+          {children}
+        </Providers>
       </body>
     </html>
   );
